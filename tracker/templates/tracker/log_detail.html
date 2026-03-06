@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}Log Detail — MindLoad{% endblock %}
+{% block content %}
+<div style="padding:2rem 0">
+<div class="container" style="max-width:800px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+        <div>
+            <h1 style="font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700">{{ log.date|date:"l, F j, Y" }}</h1>
+            <div style="color:var(--text3);font-size:0.85rem;margin-top:4px">Logged {{ log.created_at|timesince }} ago</div>
+        </div>
+        <div style="display:flex;gap:8px">
+            <a href="{% url 'log_today' %}" class="btn btn-secondary btn-sm">✏️ Edit Today</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-sm">← Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Score Card -->
+    <div class="card" style="background:linear-gradient(135deg,rgba(124,106,255,0.08),rgba(168,85,247,0.04));border-color:rgba(124,106,255,0.2);padding:2rem;margin-bottom:1.5rem">
+        <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+            <div style="text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:3rem;font-weight:700;color:{{ log.get_load_color }};line-height:1">
+                    {{ log.mental_load_score|floatformat:0 }}
+                </div>
+                <div style="font-size:0.8rem;color:var(--text3)">/ 100</div>
+            </div>
+            <div>
+                <div style="font-size:1.5rem;font-weight:700;font-family:'Space Grotesk',sans-serif">
+                    {{ log.get_load_emoji }} {{ log.get_predicted_mental_load_display }}
+                </div>
+                <div style="color:var(--text2);font-size:0.875rem;margin-top:4px">
+                    ML Confidence: {{ log.ml_confidence|floatformat:0 }}%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Recommendations -->
+    {% if recommendations %}
+    <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">🤖 AI Recommendations</div>
+        {% for reco in recommendations %}
+        <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:0.875rem;color:var(--text2);border-left:3px solid var(--accent)">
+            {{ reco }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Data Grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+        <div class="card">
+            <div class="card-title">📚 Study & Work</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Study Hours</span><strong>{{ log.study_hours }}h</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Tasks Completed</span><strong>{{ log.tasks_completed }}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Tasks Pending</span><strong>{{ log.tasks_pending }}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Deadline Stress</span><strong>{{ log.deadline_stress }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Breaks</span><strong>{{ log.break_count }}</strong></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">😴 Sleep</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Sleep Hours</span><strong>{{ log.sleep_hours }}h</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Sleep Quality</span><strong>{{ log.sleep_quality }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Bedtime</span><strong>{{ log.bedtime_hour }}:00</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Wake Time</span><strong>{{ log.wake_time_hour }}:00</strong></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">🏃 Physical</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Exercise</span><strong>{{ log.exercise_minutes }} min</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Type</span><strong>{{ log.exercise_type|default:"—" }}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Fatigue</span><strong>{{ log.physical_fatigue }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Steps</span><strong>{{ log.steps_count }}</strong></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">😊 Mood & Mind</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Mood Score</span><strong>{{ log.mood_score }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Anxiety</span><strong>{{ log.anxiety_level }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Focus</span><strong>{{ log.focus_level }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Motivation</span><strong>{{ log.motivation_level }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Overthinking</span><strong>{{ log.overthinking_episodes }}x</strong></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">👥 Social</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Conversations</span><strong>{{ log.social_interactions }}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Family Time</span><strong>{{ log.family_time_minutes }} min</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Relationship Stress</span><strong>{{ log.relationship_stress }}/10</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Conflicts</span><strong>{{ log.conflict_count }}</strong></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">📱 Digital</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Screen Time</span><strong>{{ log.screen_time_hours }}h</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Social Media</span><strong>{{ log.social_media_hours }}h</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Phone Pickups</span><strong>{{ log.phone_pickups }}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text2)">Notifications</span><strong>{{ log.notification_count }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Journal -->
+    {% if log.journal_entry %}
+    <div class="card">
+        <div class="card-title">📔 Journal Entry</div>
+        <p style="font-size:0.9rem;line-height:1.7;color:var(--text2)">{{ log.journal_entry }}</p>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

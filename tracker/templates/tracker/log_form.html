@@ -1,0 +1,426 @@
+{% extends 'base.html' %}
+{% block title %}Log Today — MindLoad{% endblock %}
+{% block extra_css %}
+<style>
+.log-page { padding: 2rem 0 4rem; }
+.log-header { margin-bottom: 2rem; }
+.log-header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 700; }
+.log-header p { color: var(--text2); margin-top: 0.5rem; }
+.log-form { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start; }
+@media(max-width:900px){ .log-form { grid-template-columns: 1fr; } }
+.form-sections { display: flex; flex-direction: column; gap: 1rem; }
+.section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1rem 1.5rem;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+}
+.section-header-icon { font-size: 1.1rem; }
+.section-header-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.95rem; }
+.section-header-arrow { margin-left: auto; color: var(--text3); transition: transform 0.2s; }
+.section-header.open .section-header-arrow { transform: rotate(180deg); }
+.section-body { padding: 1.5rem; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media(max-width:640px){ .form-row { grid-template-columns: 1fr; } }
+.range-group { }
+.range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.range-row input[type="range"] { flex: 1; }
+.range-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 24px;
+    text-align: center;
+}
+.sidebar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: sticky;
+    top: 80px;
+}
+.sidebar-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 1rem; }
+.progress-steps { display: flex; flex-direction: column; gap: 8px; }
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.85rem;
+    color: var(--text2);
+}
+.step-item:hover { background: var(--bg2); }
+.step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border2);
+    flex-shrink: 0;
+}
+.step-item.done .step-dot { background: var(--green); }
+.step-item.active .step-dot { background: var(--accent); }
+.submit-section { margin-top: 1.5rem; }
+.tips-box {
+    margin-top: 1.5rem;
+    background: rgba(124,106,255,0.05);
+    border: 1px solid rgba(124,106,255,0.15);
+    border-radius: 10px;
+    padding: 1rem;
+}
+.tips-box h4 { font-size: 0.8rem; font-weight: 600; color: var(--accent); margin-bottom: 0.5rem; }
+.tips-box ul { list-style: none; }
+.tips-box li { font-size: 0.78rem; color: var(--text2); margin-bottom: 4px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="log-page">
+<div class="container">
+    <div class="log-header">
+        <h1>{% if is_edit %}✏️ Update Today's Log{% else %}📋 Log Today — {{ today|date:"M j, Y" }}{% endif %}</h1>
+        <p>Take 3 minutes to fill this in. Your mental load score will be calculated instantly.</p>
+    </div>
+
+    <form method="POST" id="logForm">
+        {% csrf_token %}
+        <div class="log-form">
+            <div class="form-sections">
+
+                <!-- Study & Work -->
+                <div class="section-card" id="sec-study">
+                    <div class="section-header open" onclick="toggleSection(this)">
+                        <span class="section-header-icon">📚</span>
+                        <span class="section-header-title">Study & Work</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Study Hours Today</label>
+                                {{ form.study_hours }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tasks Completed</label>
+                                {{ form.tasks_completed }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Tasks Still Pending</label>
+                                {{ form.tasks_pending }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Breaks Taken</label>
+                                {{ form.break_count }}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Deadline Stress (1 = no stress, 10 = extreme)</label>
+                            <div class="range-row">
+                                {{ form.deadline_stress }}
+                                <span class="range-val" id="val-deadline_stress">{{ form.deadline_stress.value|default:5 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sleep -->
+                <div class="section-card" id="sec-sleep">
+                    <div class="section-header open" onclick="toggleSection(this)">
+                        <span class="section-header-icon">😴</span>
+                        <span class="section-header-title">Sleep & Rest</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Hours Slept Last Night</label>
+                                {{ form.sleep_hours }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bedtime Hour (0-23)</label>
+                                {{ form.bedtime_hour }}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sleep Quality (1 = terrible, 10 = amazing)</label>
+                            <div class="range-row">
+                                {{ form.sleep_quality }}
+                                <span class="range-val" id="val-sleep_quality">{{ form.sleep_quality.value|default:5 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exercise -->
+                <div class="section-card" id="sec-exercise">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-header-icon">🏃</span>
+                        <span class="section-header-title">Physical Activity</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body" style="display:none">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Exercise Duration (minutes)</label>
+                                {{ form.exercise_minutes }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Exercise Type</label>
+                                {{ form.exercise_type }}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Physical Fatigue Level (1-10)</label>
+                            <div class="range-row">
+                                {{ form.physical_fatigue }}
+                                <span class="range-val" id="val-physical_fatigue">{{ form.physical_fatigue.value|default:5 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Steps Count</label>
+                            {{ form.steps_count }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Social & Relationships -->
+                <div class="section-card" id="sec-social">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-header-icon">👥</span>
+                        <span class="section-header-title">Social & Relationships</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body" style="display:none">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Meaningful Conversations</label>
+                                {{ form.social_interactions }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Family Time (minutes)</label>
+                                {{ form.family_time_minutes }}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Relationship Stress (1-10)</label>
+                            <div class="range-row">
+                                {{ form.relationship_stress }}
+                                <span class="range-val" id="val-relationship_stress">{{ form.relationship_stress.value|default:3 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Social Satisfaction (1-10)</label>
+                            <div class="range-row">
+                                {{ form.social_satisfaction }}
+                                <span class="range-val" id="val-social_satisfaction">{{ form.social_satisfaction.value|default:5 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Conflicts / Arguments Today</label>
+                            {{ form.conflict_count }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Screen Time -->
+                <div class="section-card" id="sec-screen">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-header-icon">📱</span>
+                        <span class="section-header-title">Screen & Digital Behavior</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body" style="display:none">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Total Screen Time (hours)</label>
+                                {{ form.screen_time_hours }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Social Media (hours)</label>
+                                {{ form.social_media_hours }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Phone Pickups</label>
+                                {{ form.phone_pickups }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Notifications Received</label>
+                                {{ form.notification_count }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mood -->
+                <div class="section-card" id="sec-mood">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-header-icon">😊</span>
+                        <span class="section-header-title">Mood & Mental State</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body" style="display:none">
+                        <div class="form-group">
+                            <label class="form-label">Overall Mood (1 = terrible, 10 = amazing)</label>
+                            <div class="range-row">
+                                {{ form.mood_score }}
+                                <span class="range-val" id="val-mood_score">{{ form.mood_score.value|default:5 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Anxiety Level (1-10)</label>
+                            <div class="range-row">
+                                {{ form.anxiety_level }}
+                                <span class="range-val" id="val-anxiety_level">{{ form.anxiety_level.value|default:3 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Focus Level (1-10)</label>
+                            <div class="range-row">
+                                {{ form.focus_level }}
+                                <span class="range-val" id="val-focus_level">{{ form.focus_level.value|default:5 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Motivation Level (1-10)</label>
+                            <div class="range-row">
+                                {{ form.motivation_level }}
+                                <span class="range-val" id="val-motivation_level">{{ form.motivation_level.value|default:5 }}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Overthinking Episodes</label>
+                            {{ form.overthinking_episodes }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Journal -->
+                <div class="section-card" id="sec-journal">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-header-icon">📔</span>
+                        <span class="section-header-title">Journal & Stressors</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body" style="display:none">
+                        <div class="form-group">
+                            <label class="form-label">Journal Entry (optional)</label>
+                            {{ form.journal_entry }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">What's stressing you out today?</label>
+                            {{ form.stressors }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Extracurricular -->
+                <div class="section-card" id="sec-extra">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-header-icon">🎯</span>
+                        <span class="section-header-title">Extracurricular & Hobbies</span>
+                        <span class="section-header-arrow">▼</span>
+                    </div>
+                    <div class="section-body" style="display:none">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Extracurricular Hours</label>
+                                {{ form.extracurricular_hours }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hobby Time (minutes)</label>
+                                {{ form.hobby_time_minutes }}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                                {{ form.club_activities }} Attended club/society activities today
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" style="width:100%">
+                    🧠 Calculate My Mental Load Score
+                </button>
+            </div>
+
+            <!-- Sidebar -->
+            <div>
+                <div class="sidebar-card">
+                    <div class="sidebar-title">📋 Sections</div>
+                    <div class="progress-steps">
+                        <div class="step-item active" onclick="scrollToSection('sec-study')"><span class="step-dot"></span>Study & Work</div>
+                        <div class="step-item" onclick="scrollToSection('sec-sleep')"><span class="step-dot"></span>Sleep & Rest</div>
+                        <div class="step-item" onclick="scrollToSection('sec-exercise')"><span class="step-dot"></span>Physical Activity</div>
+                        <div class="step-item" onclick="scrollToSection('sec-social')"><span class="step-dot"></span>Relationships</div>
+                        <div class="step-item" onclick="scrollToSection('sec-screen')"><span class="step-dot"></span>Screen Time</div>
+                        <div class="step-item" onclick="scrollToSection('sec-mood')"><span class="step-dot"></span>Mood & Mind</div>
+                        <div class="step-item" onclick="scrollToSection('sec-journal')"><span class="step-dot"></span>Journal</div>
+                        <div class="step-item" onclick="scrollToSection('sec-extra')"><span class="step-dot"></span>Extracurricular</div>
+                    </div>
+                    <div class="tips-box">
+                        <h4>💡 Quick Tips</h4>
+                        <ul>
+                            <li>· Fill at least 3 sections for accurate prediction</li>
+                            <li>· Sleep & mood have the highest weight</li>
+                            <li>· Be honest — this data is only for you</li>
+                            <li>· Log at the same time each day for best results</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function toggleSection(header) {
+    const body = header.nextElementSibling;
+    const isOpen = header.classList.contains('open');
+    header.classList.toggle('open', !isOpen);
+    body.style.display = isOpen ? 'none' : 'block';
+}
+
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({behavior:'smooth', block:'start'});
+        const header = el.querySelector('.section-header');
+        if (!header.classList.contains('open')) {
+            toggleSection(header);
+        }
+    }
+}
+
+// Range sliders live update
+document.querySelectorAll('input[type="range"]').forEach(input => {
+    const name = input.name;
+    const display = document.getElementById('val-' + name);
+    if (display) {
+        input.addEventListener('input', () => display.textContent = input.value);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Insights — MindLoad{% endblock %}
+{% block extra_css %}
+<style>
+.insights { padding:2rem 0; }
+.insights-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem; }
+@media(max-width:1024px){ .insights-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:640px){ .insights-grid { grid-template-columns:1fr; } }
+.insight-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:1.25rem;
+}
+.insight-num { font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:700; }
+.insight-lbl { font-size:0.8rem; color:var(--text3); margin-top:4px; }
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+@media(max-width:900px){ .charts-row { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="insights">
+<div class="container">
+    <div style="margin-bottom:2rem">
+        <h1 style="font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700">🔍 Insights</h1>
+        <p style="color:var(--text2);margin-top:4px">Patterns and trends from all your data</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="insights-grid">
+        <div class="insight-card">
+            <div class="insight-num" style="color:var(--accent)">{{ total_logs }}</div>
+            <div class="insight-lbl">Total Days Logged</div>
+        </div>
+        <div class="insight-card">
+            <div class="insight-num" style="color:var(--accent3)">{{ avg_sleep }}h</div>
+            <div class="insight-lbl">Avg Sleep</div>
+        </div>
+        <div class="insight-card">
+            <div class="insight-num" style="color:var(--green)">{{ avg_exercise|floatformat:0 }}m</div>
+            <div class="insight-lbl">Avg Daily Exercise</div>
+        </div>
+        <div class="insight-card">
+            <div class="insight-num" style="color:var(--yellow)">{{ avg_mood }}/10</div>
+            <div class="insight-lbl">Avg Mood Score</div>
+        </div>
+    </div>
+
+    <!-- Trend -->
+    {% if trend_data %}
+    <div class="card" style="margin-bottom:1.5rem;display:flex;gap:2rem;flex-wrap:wrap;align-items:center">
+        <div style="text-align:center;min-width:100px">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:2.5rem;font-weight:700;
+                {% if trend_data.avg_score > 60 %}color:var(--orange){% elif trend_data.avg_score > 40 %}color:var(--yellow){% else %}color:var(--green){% endif %}">
+                {{ trend_data.avg_score }}
+            </div>
+            <div style="font-size:0.78rem;color:var(--text3)">Overall Avg Score</div>
+        </div>
+        <div style="flex:1">
+            <div style="font-weight:600;margin-bottom:4px;font-family:'Space Grotesk',sans-serif">
+                {% if trend_data.trend == 'improving' %}📈 Your mental load is improving
+                {% elif trend_data.trend == 'worsening' %}📉 Your mental load has been rising
+                {% else %}➡️ Your mental load is stable
+                {% endif %}
+            </div>
+            <div style="font-size:0.875rem;color:var(--text2)">
+                Range: {{ trend_data.min_score }} – {{ trend_data.max_score }} &nbsp;·&nbsp; Based on {{ trend_data.total_days }} logged days
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Best & Worst -->
+    <div class="charts-row">
+        {% if best_day %}
+        <div class="card" style="border-color:rgba(16,185,129,0.25)">
+            <div class="card-title">🏆 Best Day</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;color:var(--green)">
+                {{ best_day.date|date:"M j, Y" }}
+            </div>
+            <div style="font-size:0.875rem;color:var(--text2);margin-top:4px">Score: {{ best_day.mental_load_score|floatformat:0 }}/100 — {{ best_day.get_predicted_mental_load_display }}</div>
+            <a href="{% url 'log_detail' best_day.pk %}" class="btn btn-secondary btn-sm" style="margin-top:12px">View Log →</a>
+        </div>
+        {% endif %}
+        {% if worst_day %}
+        <div class="card" style="border-color:rgba(239,68,68,0.25)">
+            <div class="card-title">⚠️ Highest Load Day</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;color:var(--red)">
+                {{ worst_day.date|date:"M j, Y" }}
+            </div>
+            <div style="font-size:0.875rem;color:var(--text2);margin-top:4px">Score: {{ worst_day.mental_load_score|floatformat:0 }}/100 — {{ worst_day.get_predicted_mental_load_display }}</div>
+            <a href="{% url 'log_detail' worst_day.pk %}" class="btn btn-secondary btn-sm" style="margin-top:12px">View Log →</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sleep vs Load Chart -->
+    {% if total_logs > 0 %}
+    <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">Sleep Hours vs Mental Load Score</div>
+        <canvas id="sleepVsLoad" height="100"></canvas>
+    </div>
+
+    <!-- Streak Info -->
+    <div class="card" style="display:flex;gap:2rem;flex-wrap:wrap;align-items:center">
+        <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--yellow)">🔥 {{ streak.current_streak }}</div>
+            <div style="font-size:0.8rem;color:var(--text3)">Current Streak</div>
+        </div>
+        <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--accent)">{{ streak.longest_streak }}</div>
+            <div style="font-size:0.8rem;color:var(--text3)">Longest Streak</div>
+        </div>
+        <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--green)">{{ streak.total_logs }}</div>
+            <div style="font-size:0.8rem;color:var(--text3)">Total Logs</div>
+        </div>
+        <div style="margin-left:auto">
+            <p style="font-size:0.875rem;color:var(--text2)">Consistency is the #1 predictor of mental health improvement. Keep logging every day!</p>
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text3)">
+        <div style="font-size:3rem;margin-bottom:1rem">🌱</div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;color:var(--text2);margin-bottom:0.5rem">Start logging to unlock insights</h3>
+        <p>Log for at least 7 days to see meaningful patterns</p>
+        <a href="{% url 'log_today' %}" class="btn btn-primary" style="margin-top:1rem">+ Log Today</a>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const rawData = {{ sleep_chart_data|safe }};
+if (rawData.length > 0) {
+    const ctx = document.getElementById('sleepVsLoad').getContext('2d');
+    new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Sleep vs Load',
+                data: rawData.map(d => ({x: d.sleep, y: d.load})),
+                backgroundColor: rawData.map(d => d.load > 60 ? 'rgba(239,68,68,0.7)' : d.load > 40 ? 'rgba(245,158,11,0.7)' : 'rgba(16,185,129,0.7)'),
+                pointRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1a2e',
+                    titleColor: '#e8e8f0',
+                    bodyColor: '#9090b0',
+                    callbacks: {
+                        label: (ctx) => `Sleep: ${ctx.parsed.x}h, Load: ${ctx.parsed.y}/100`
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Sleep Hours', color: '#5a5a7a' }, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a5a7a' } },
+                y: { min: 0, max: 100, title: { display: true, text: 'Mental Load Score', color: '#5a5a7a' }, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a5a7a' } }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

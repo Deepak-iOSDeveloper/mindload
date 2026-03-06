@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}History — MindLoad{% endblock %}
+{% block content %}
+<div style="padding:2rem 0">
+<div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+        <div>
+            <h1 style="font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700">📖 History</h1>
+            <p style="color:var(--text2);margin-top:4px">Your complete mental load log</p>
+        </div>
+        <a href="{% url 'log_today' %}" class="btn btn-primary">+ Log Today</a>
+    </div>
+
+    {% if logs %}
+    <div style="display:flex;flex-direction:column;gap:8px">
+        {% for log in logs %}
+        <a href="{% url 'log_detail' log.pk %}" style="text-decoration:none;color:var(--text)">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;flex-wrap:wrap;gap:1rem" onmouseover="this.style.borderColor='rgba(255,255,255,0.12)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)'">
+                <div>
+                    <div style="font-weight:600;font-family:'Space Grotesk',sans-serif">{{ log.date|date:"l, M j, Y" }}</div>
+                    <div style="font-size:0.8rem;color:var(--text3);margin-top:4px">
+                        📚 {{ log.study_hours }}h &nbsp; 😴 {{ log.sleep_hours }}h &nbsp; 🏃 {{ log.exercise_minutes }}m &nbsp; 😊 {{ log.mood_score }}/10
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                    {% if log.mental_load_score %}
+                    <div>
+                        <div style="font-family:'Space Grotesk',sans-serif;font-size:1.4rem;font-weight:700;color:{{ log.get_load_color }};text-align:right">
+                            {{ log.mental_load_score|floatformat:0 }}
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text3);text-align:right">/ 100</div>
+                    </div>
+                    <span class="badge {% if log.predicted_mental_load == 'very_low' or log.predicted_mental_load == 'low' %}badge-green{% elif log.predicted_mental_load == 'moderate' %}badge-yellow{% else %}badge-red{% endif %}">
+                        {{ log.get_predicted_mental_load_display }}
+                    </span>
+                    {% else %}
+                    <span class="badge" style="background:var(--bg2);color:var(--text3)">No score</span>
+                    {% endif %}
+                    <span style="color:var(--text3);font-size:1.2rem">›</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:4rem;color:var(--text3)">
+        <div style="font-size:3rem;margin-bottom:1rem">📭</div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;color:var(--text2);margin-bottom:0.5rem">No logs yet</h3>
+        <p style="margin-bottom:1.5rem">Start logging to build your mental health history</p>
+        <a href="{% url 'log_today' %}" class="btn btn-primary">+ Log Today's Data</a>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

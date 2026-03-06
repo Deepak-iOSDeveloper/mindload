@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — MindLoad{% endblock %}
+{% block extra_css %}
+<style>
+.dashboard { padding: 2rem 0; }
+.dash-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; flex-wrap:wrap; gap:1rem; }
+.dash-greeting { font-family:'Space Grotesk',sans-serif; font-size:1.6rem; font-weight:700; }
+.dash-date { font-size:0.85rem; color:var(--text3); margin-top:2px; }
+.today-score-card {
+    background: linear-gradient(135deg, rgba(124,106,255,0.1), rgba(168,85,247,0.05));
+    border: 1px solid rgba(124,106,255,0.25);
+    border-radius: 20px;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'Space Grotesk', sans-serif;
+}
+.score-circle .score-num { font-size: 2.2rem; font-weight: 700; line-height: 1; }
+.score-circle .score-lbl { font-size: 0.7rem; color: var(--text2); margin-top: 2px; }
+.today-info h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+.today-info p { font-size: 0.875rem; color: var(--text2); line-height: 1.6; }
+.reco-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; }
+.reco-item {
+    background: var(--bg2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text2);
+    border-left: 3px solid var(--accent);
+}
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+@media(max-width:1024px){ .stats-grid { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:640px){ .stats-grid { grid-template-columns: 1fr; } }
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.stat-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+}
+.stat-content .stat-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.stat-content .stat-lbl { font-size: 0.75rem; color: var(--text3); margin-top: 2px; }
+.chart-section { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+@media(max-width:900px){ .chart-section { grid-template-columns: 1fr; } }
+.recent-logs { margin-bottom: 1.5rem; }
+.log-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 10px;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: var(--text);
+}
+.log-row:hover { background: var(--surface2); }
+.log-row-date { font-size: 0.85rem; font-weight: 500; }
+.log-row-meta { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text3);
+}
+.empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+.empty-state h3 { font-family: 'Space Grotesk', sans-serif; color: var(--text2); margin-bottom: 0.5rem; }
+.streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--yellow);
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="dashboard">
+<div class="container">
+    <div class="dash-header">
+        <div>
+            <div class="dash-greeting">
+                {% if user.first_name %}Hey, {{ user.first_name }} 👋{% else %}Hey there 👋{% endif %}
+            </div>
+            <div class="dash-date">{{ today|date:"l, F j, Y" }}</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+            {% if streak.current_streak > 0 %}
+            <div class="streak-badge">🔥 {{ streak.current_streak }} day streak</div>
+            {% endif %}
+            <a href="{% url 'log_today' %}" class="btn btn-primary">{% if today_log %}✏️ Update Log{% else %}+ Log Today{% endif %}</a>
+        </div>
+    </div>
+
+    <!-- Today's Score -->
+    {% if today_log %}
+    <div class="today-score-card">
+        <div class="score-circle" style="border-color:{{ today_log.get_load_color }};color:{{ today_log.get_load_color }}">
+            <span class="score-num">{{ today_log.mental_load_score|floatformat:0 }}</span>
+            <span class="score-lbl">/ 100</span>
+        </div>
+        <div class="today-info">
+            <h3>{{ today_log.get_load_emoji }} Mental Load: {{ today_log.get_predicted_mental_load_display }}</h3>
+            <p>Confidence: {{ today_log.ml_confidence|floatformat:0 }}% · Logged {{ today_log.created_at|timesince }} ago</p>
+            {% if recommendations %}
+            <div class="reco-list">
+                {% for reco in recommendations|slice:":3" %}
+                <div class="reco-item">{{ reco }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center;padding:2rem;margin-bottom:1.5rem;border:1px dashed var(--border2);">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">📋</div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;margin-bottom:0.5rem">No log for today yet</h3>
+        <p style="color:var(--text2);font-size:0.875rem;margin-bottom:1.25rem">Log your day and get your mental load score with personalized AI recommendations.</p>
+        <a href="{% url 'log_today' %}" class="btn btn-primary">+ Log Today's Data</a>
+    </div>
+    {% endif %}
+
+    <!-- Stats Row -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(124,106,255,0.1)">📊</div>
+            <div class="stat-content">
+                <div class="stat-num">{{ trend_data.avg_score|default:"—" }}</div>
+                <div class="stat-lbl">30-Day Avg Score</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(245,158,11,0.1)">🔥</div>
+            <div class="stat-content">
+                <div class="stat-num">{{ streak.current_streak|default:0 }}</div>
+                <div class="stat-lbl">Day Streak</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(16,185,129,0.1)">😴</div>
+            <div class="stat-content">
+                <div class="stat-num">{{ weekly.avg_sleep|default:"—" }}h</div>
+                <div class="stat-lbl">Avg Sleep (7d)</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(56,189,248,0.1)">📝</div>
+            <div class="stat-content">
+                <div class="stat-num">{{ streak.total_logs|default:0 }}</div>
+                <div class="stat-lbl">Total Logs</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-section">
+        <div class="card">
+            <div class="card-title">Mental Load — Last 30 Days</div>
+            <canvas id="loadChart" height="140"></canvas>
+        </div>
+        <div class="card">
+            <div class="card-title">Load Distribution</div>
+            <canvas id="distChart" height="200"></canvas>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem;justify-content:center;">
+                <span style="font-size:0.7rem;color:var(--text3)">🟢 Very Low</span>
+                <span style="font-size:0.7rem;color:var(--text3)">🟩 Low</span>
+                <span style="font-size:0.7rem;color:var(--text3)">🟡 Moderate</span>
+                <span style="font-size:0.7rem;color:var(--text3)">🟠 High</span>
+                <span style="font-size:0.7rem;color:var(--text3)">🔴 Critical</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Logs -->
+    <div class="card recent-logs">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <div class="card-title" style="margin:0">Recent Logs</div>
+            <a href="{% url 'history' %}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        {% if recent_logs %}
+            {% for log in recent_logs reversed %}
+            <a href="{% url 'log_detail' log.pk %}" class="log-row">
+                <div>
+                    <div class="log-row-date">{{ log.date|date:"l, M j" }}</div>
+                    <div class="log-row-meta">{{ log.study_hours }}h study · {{ log.sleep_hours }}h sleep · {{ log.exercise_minutes }}min exercise</div>
+                </div>
+                <div style="text-align:right;display:flex;align-items:center;gap:12px;">
+                    {% if log.mental_load_score %}
+                    <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:{{ log.get_load_color }}">
+                        {{ log.mental_load_score|floatformat:0 }}
+                    </div>
+                    <span class="badge {% if log.predicted_mental_load == 'very_low' or log.predicted_mental_load == 'low' %}badge-green{% elif log.predicted_mental_load == 'moderate' %}badge-yellow{% else %}badge-red{% endif %}">
+                        {{ log.get_predicted_mental_load_display }}
+                    </span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h3>No logs yet this week</h3>
+                <p>Start logging to see your history here</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Trend indicator -->
+    {% if trend_data.trend %}
+    <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.5rem;">
+        <span style="font-size:1.5rem">
+            {% if trend_data.trend == 'improving' %}📈{% elif trend_data.trend == 'worsening' %}📉{% else %}➡️{% endif %}
+        </span>
+        <div>
+            <div style="font-weight:600;font-size:0.9rem">
+                {% if trend_data.trend == 'improving' %}Your mental load is improving! Keep it up.
+                {% elif trend_data.trend == 'worsening' %}Your mental load has been rising lately. Check your insights.
+                {% else %}Your mental load is stable. Consistency is key!
+                {% endif %}
+            </div>
+            <div style="font-size:0.8rem;color:var(--text3)">Based on last {{ trend_data.total_days }} logged days</div>
+        </div>
+        <a href="{% url 'insights' %}" class="btn btn-secondary btn-sm" style="margin-left:auto">View Insights</a>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const labels = {{ chart_labels|safe }};
+const scores = {{ chart_scores|safe }};
+const dist = {{ load_dist|safe }};
+
+// Load chart
+const ctx = document.getElementById('loadChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Mental Load Score',
+            data: scores,
+            borderColor: '#7c6aff',
+            backgroundColor: 'rgba(124,106,255,0.08)',
+            borderWidth: 2,
+            pointBackgroundColor: scores.map(s => s > 80 ? '#ef4444' : s > 60 ? '#f97316' : s > 40 ? '#f59e0b' : '#10b981'),
+            pointRadius: 4,
+            tension: 0.4,
+            fill: true,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1a1a2e',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                titleColor: '#e8e8f0',
+                bodyColor: '#9090b0',
+                callbacks: {
+                    label: (ctx) => `Score: ${ctx.raw}/100`
+                }
+            }
+        },
+        scales: {
+            y: {
+                min: 0, max: 100,
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                ticks: { color: '#5a5a7a', font: { size: 11 } }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: '#5a5a7a', font: { size: 11 }, maxTicksLimit: 8 }
+            }
+        }
+    }
+});
+
+// Distribution donut
+const ctx2 = document.getElementById('distChart').getContext('2d');
+new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+        labels: ['Very Low', 'Low', 'Moderate', 'High', 'Critical'],
+        datasets: [{
+            data: dist,
+            backgroundColor: ['#10b981','#34d399','#f59e0b','#f97316','#ef4444'],
+            borderWidth: 0,
+            hoverOffset: 6,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1a1a2e',
+                titleColor: '#e8e8f0',
+                bodyColor: '#9090b0',
+            }
+        },
+        cutout: '65%',
+    }
+});
+</script>
+{% endblock %}

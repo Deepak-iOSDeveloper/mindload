@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% block title %}MindLoad — AI-Powered Mental Load Tracker{% endblock %}
+{% block extra_css %}
+<style>
+.hero {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    align-items: center;
+    padding: 4rem 0;
+    position: relative;
+    overflow: hidden;
+}
+.hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+}
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,106,255,0.1);
+    border: 1px solid rgba(124,106,255,0.25);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+}
+.hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 3.2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 1.25rem;
+}
+.hero h1 .highlight {
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.hero p {
+    font-size: 1.05rem;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 2rem;
+    max-width: 480px;
+}
+.hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hero-visual {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.hero-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 1.5rem;
+    width: 320px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    animation: float 4s ease-in-out infinite;
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+.hero-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+.hero-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.9rem; }
+.mini-score {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--yellow);
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+.mini-label { font-size: 0.8rem; color: var(--text2); text-align: center; margin-bottom: 1.25rem; }
+.mini-bars { display: flex; flex-direction: column; gap: 8px; }
+.mini-bar-row { display: flex; align-items: center; gap: 10px; }
+.mini-bar-label { font-size: 0.75rem; color: var(--text3); width: 80px; flex-shrink: 0; }
+.mini-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.mini-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+.features {
+    padding: 5rem 0;
+    border-top: 1px solid var(--border);
+}
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3rem; }
+.feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem;
+    transition: all 0.3s;
+}
+.feature-card:hover {
+    border-color: rgba(124,106,255,0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+.feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+.feature-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+.feature-desc { font-size: 0.875rem; color: var(--text2); line-height: 1.6; }
+.section-eyebrow {
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+}
+.section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: -0.5px;
+}
+.cta-section {
+    padding: 5rem 0;
+    text-align: center;
+    border-top: 1px solid var(--border);
+}
+.bg-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,106,255,0.07) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+@media(max-width:768px){
+    .hero-grid { grid-template-columns:1fr; gap:2rem; }
+    .hero h1 { font-size:2.2rem; }
+    .hero-visual { display:none; }
+    .features-grid { grid-template-columns:1fr; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="bg-glow"></div>
+    <div class="container">
+        <div class="hero-grid">
+            <div>
+                <div class="hero-eyebrow">🧠 AI-Powered Mental Load Tracking</div>
+                <h1>Understand your<br><span class="highlight">mental load</span><br>before it breaks you</h1>
+                <p>MindLoad tracks 30+ daily signals — sleep, study, social life, screen time, exercise, and mood — and uses ML to predict your mental load score before burnout hits.</p>
+                <div class="hero-actions">
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Start Tracking Free →</a>
+                    <a href="{% url 'login' %}" class="btn btn-secondary btn-lg">Sign In</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-card">
+                    <div class="hero-card-header">
+                        <span class="hero-card-title">Today's Load</span>
+                        <span class="badge badge-yellow">Moderate</span>
+                    </div>
+                    <div class="mini-score">52</div>
+                    <div class="mini-label">/ 100 — Mental Load Score</div>
+                    <div class="mini-bars">
+                        <div class="mini-bar-row">
+                            <span class="mini-bar-label">Study Stress</span>
+                            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:65%;background:#f59e0b"></div></div>
+                        </div>
+                        <div class="mini-bar-row">
+                            <span class="mini-bar-label">Sleep Quality</span>
+                            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:40%;background:#10b981"></div></div>
+                        </div>
+                        <div class="mini-bar-row">
+                            <span class="mini-bar-label">Social Life</span>
+                            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:55%;background:#7c6aff"></div></div>
+                        </div>
+                        <div class="mini-bar-row">
+                            <span class="mini-bar-label">Screen Time</span>
+                            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:75%;background:#ef4444"></div></div>
+                        </div>
+                        <div class="mini-bar-row">
+                            <span class="mini-bar-label">Exercise</span>
+                            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:30%;background:#38bdf8"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <div class="section-eyebrow">Why MindLoad</div>
+        <h2 class="section-title">Track every signal that matters</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(124,106,255,0.1)">🧠</div>
+                <div class="feature-title">AI Mental Load Score</div>
+                <div class="feature-desc">Our ML model analyzes 30+ daily signals to give you a 0-100 mental load score with category labels and confidence levels.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(16,185,129,0.1)">😴</div>
+                <div class="feature-title">Sleep & Recovery Tracking</div>
+                <div class="feature-desc">Track sleep hours, quality, and bedtime patterns. Understand how rest directly impacts your mental load score.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(56,189,248,0.1)">📱</div>
+                <div class="feature-title">Digital Behavior Signals</div>
+                <div class="feature-desc">Screen time, social media usage, phone pickups, and notification overload all contribute to your mental load.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(245,158,11,0.1)">👥</div>
+                <div class="feature-title">Relationship Health</div>
+                <div class="feature-desc">Track family time, social satisfaction, conflict frequency, and relationship stress — often the biggest hidden load.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(239,68,68,0.1)">📊</div>
+                <div class="feature-title">Trend & Pattern Analysis</div>
+                <div class="feature-desc">See 30-day charts, weekly averages, best and worst days. Identify patterns before they become problems.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(236,72,153,0.1)">💡</div>
+                <div class="feature-title">Personalized Recommendations</div>
+                <div class="feature-desc">Get AI-generated action steps based on exactly what's driving your mental load high that day.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <div class="container">
+        <div class="hero-eyebrow" style="justify-content:center;margin-bottom:1.5rem">🔥 Free to use, forever</div>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:700;letter-spacing:-0.5px;margin-bottom:1rem">Start tracking your mental load today</h2>
+        <p style="color:var(--text2);margin-bottom:2rem;max-width:480px;margin-left:auto;margin-right:auto">Takes 2 minutes a day. Builds self-awareness in 2 weeks. Changes how you manage yourself in 2 months.</p>
+        <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Create Free Account →</a>
+    </div>
+</section>
+{% endblock %}
